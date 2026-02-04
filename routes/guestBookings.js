@@ -191,10 +191,11 @@ router.post('/create', async (req, res) => {
     
     let stripeCustomerId = guestCustomer?.stripeCustomerId;
     let stripePaymentMethodId = null;
+    let setupIntent = null;
     
     // If card payment, verify setup intent
     if (!isPayAtVenue) {
-      const setupIntent = await stripe.setupIntents.retrieve(setupIntentId);
+      setupIntent = await stripe.setupIntents.retrieve(setupIntentId);
       
       if (setupIntent.status !== 'succeeded') {
         return res.status(400).json({ message: 'Card setup not complete. Please try again.' });
