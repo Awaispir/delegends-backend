@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Booking = require('../models/Booking');
+const User = require('../models/User');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
 // Get all bookings (admin only)
@@ -258,13 +259,24 @@ router.get('/stats/dashboard', authMiddleware, adminMiddleware, async (req, res)
     const confirmedBookings = await Booking.countDocuments({ status: 'confirmed' });
     const completedBookings = await Booking.countDocuments({ status: 'completed' });
 
+    // Calculate total staff (users with admin, owner, or receptionist roles)
+    const totalStaff = await User.countDocuments({ 
+      role: { $in: ['admin', 'owner', 'receptionist'] } 
+    });
+
+    // Calculate total revenue from completed bookings
+    const completedBookingsData = await Booking.find({ status: 'completed' });
+    const totalRevenue = completedBookingsData.reduce((sum, booking) => {
+      return sum + (booking.totalPrice || 0);
+    }, 0);
+
     res.json({
       totalBookings,
       pendingBookings,
       confirmedBookings,
       completedBookings,
-      totalStaff: 12,
-      totalRevenue: 15420,
+      totalStaff,
+      totalRevenue: Math.round(totalRevenue * 100) / 100, // Round to 2 decimal places
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
