@@ -184,7 +184,7 @@ app.post('/api/bookings/webhook',
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// MongoDB Connection
+// MongoDB Connection with connection pooling
 const connectDB = async () => {
   try {
     if (!process.env.MONGODB_URI) {
@@ -193,6 +193,10 @@ const connectDB = async () => {
     }
     await mongoose.connect(process.env.MONGODB_URI, {
       serverSelectionTimeoutMS: 5000,
+      maxPoolSize: 10,
+      minPoolSize: 2,
+      socketTimeoutMS: 45000,
+      family: 4
     });
     console.log('✅ MongoDB Connected successfully!');
   } catch (error) {
@@ -202,6 +206,15 @@ const connectDB = async () => {
 };
 
 connectDB();
+
+// Handle MongoDB connection events
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected');
+});
 
 // Test Cloudinary configuration on startup
 try {
